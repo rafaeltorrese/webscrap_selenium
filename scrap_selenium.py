@@ -19,7 +19,7 @@ options.add_experimental_option('detach', True)
 options.add_argument('start-maximized')
 options.add_argument('--incognito')
 
-
+# download ChromeDriver from https://chromedriver.chromium.org/downloads
 driver = webdriver.Chrome(executable_path=r'..\chromedriver.exe')  # for windows
 
 # driver = webdriver.Chrome(chrome_options=options,
