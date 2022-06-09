@@ -56,9 +56,10 @@ print(f'Number of stops: {num_stops}')
 # %% [markdown]
 # ## Stops and fares
 # %%
-leg = legs[0]
+leg = legs[1]
+# %% [markdown]
+# ## Legs Information
 # %%
-
 # Departure City Leg
 print(leg.find_element(By.XPATH, '//span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text)
 
@@ -133,28 +134,69 @@ def get_prices(flight):
 #%%
 def get_info_leg(flight):
     'Function that returns information about a leg flight'
+
+    # Open the Modal
+    # flight.find_element(By.XPATH, './/a[@id="itinerary-modal-0-dialog-open"]').click()
+
     info_legs = []    
+
     legs = flight.find_elements(By.XPATH, '//section[@data-test="section-info-leg"]')
+    
     for leg in legs:
-        # Departure City Leg
-        leg.find_element(By.XPATH, '//span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text
+        try:            
+            connection_length = leg.find_element(By.XPATH, './/following-sibling::section[@data-test="section-info-connection"]//span[@class="time"]').text
+            connection_place = leg.find_element(By.XPATH, './/following-sibling::section[@data-test="section-info-connection"]//span[@class="connection-text"]').text            
+        except:
+            connection_length = ''
+            connection_place = ''
 
-        # Departure Time Leg
-        leg.find_element(By.XPATH, '//span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text
+        info = {
+            # Source Leg
+            'source': leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div/span[1]').text,
+            # Source Time Leg
+            'departure': leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text,
+            # Duration flight
+            'duration': leg.find_element(By.XPATH, './/span[@class="pathInfo-duration"]/following-sibling::span[@class="time"]').text,
+            # Sink Leg
+            'sink': leg.find_element(By.XPATH, './/span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text,
+            # Sink Time Leg        
+            'arrival': leg.find_element(By.XPATH, './/span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text.replace('. ', '.'),
+            # airplane model
+            'airplane': leg.find_element(By.XPATH, './/span[@class="airplane-code"]').text,        
+            #  flight number
+            'fligth': leg.find_element(By.XPATH, './/div[@class="incoming-outcoming-title"]/div').text,
 
-        # Duration flight
-        leg.find_element(By.XPATH, './/div[@class="sc-cdQEHs jryrRi"]//span[@class="time"]').text
+            # connection length            
+            'connection': connection_length,
+            # connection place
+            'connection_place': connection_place,
+        }            
 
-        # airplane model
-        leg.find_element(By.XPATH, './/div[@class="sc-bNpCPZ fOmMxC"]/span[@class="airplane-code"]').text
+        info_legs.append(info)              
 
-        # flight number
-        leg.find_element(By.XPATH, '//div[@class="incoming-outcoming-title"]/div').text
-        # %%
-        # Arrival City Leg
-        print(leg.find_element(By.XPATH, '//span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text)
+    # button_close = flight.find_element(By.XPATH, '//button[@id="itinerary-modal-0-dialog-close"]')    
+    # button_close.click()
 
-        # Arrival Time Leg
-        print(leg.find_element(By.XPATH, '//span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text.replace('. ', '.'))
+    return info_legs
+# %%
+print(flight)
 
-    return info_leg
+# %%
+infolegs = get_info_leg(flight)
+print(infolegs)
+# %%
+def get_info_flights(flight):
+    return {
+        'departure': flight.find_element( By.XPATH, './/div[contains(@class, "flight-information")][1]/span').text,
+        'arrival': flight.find_element(By.XPATH, './/div[contains(@class, "flight-information")][2]/span').text.split('\n')[0],
+        'days': flight.find_element(By.XPATH, './/div[contains(@class, "flight-information")][2]/span/span').text,
+        'duration': flight.find_element(By.XPATH, './/div[contains(@class, "flight-duration")]/span[2]').text,    
+    }
+    
+# %%
+    
+print(get_info_flights(flight))
+
+# %%
+def get_info(driver):
+    flights = driver.find_elements(By.XPATH, '//li[@class="sc-dCVVYJ CEVgB"]')
