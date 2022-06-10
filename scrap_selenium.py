@@ -1,4 +1,6 @@
 # %%
+import time
+#%%
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -23,10 +25,10 @@ driver = webdriver.Chrome(executable_path=r'..\chromedriver.exe')  # for windows
 driver.get(url)
 
 # %%
-flights = driver.find_elements(By.XPATH, '//li[@class="sc-dCVVYJ CEVgB"]')
+flights = driver.find_element(By.XPATH, '//ol[@aria-label="Vuelos disponibles."]').find_elements(By.TAG_NAME, 'li')
 print(flights)
 # %%
-flight = flights[0]
+flight = flights[-1]
 print(flight)
 
 # %%
@@ -34,7 +36,9 @@ departure = flight.find_element(
     By.XPATH, './/div[contains(@class, "flight-information")][1]/span').text
 
 arrival = flight.find_element(
-    By.XPATH, './/div[contains(@class, "flight-information")][2]/span').text
+    By.XPATH, './/div[contains(@class, "flight-information")][2]/span').text.split('\n')[0]
+
+days_difference = flight.find_element(By.XPATH, './/span[@class="days-difference"]').text
 
 duration = flight.find_element(
     By.XPATH, './/div[contains(@class, "flight-duration")]/span[2]').text
@@ -42,8 +46,9 @@ duration = flight.find_element(
 print(departure)
 print(arrival)
 print(duration)
+print(f'Days difference: {days_difference}')
 # %%
-itinerary_modal = flight.find_element(By.XPATH, './/a[@id="itinerary-modal-0-dialog-open"]')
+itinerary_modal = flight.find_element(By.XPATH, './/a[starts-with(@id, "itinerary-modal")]')
 print(itinerary_modal)
 # %%
 itinerary_modal.click()
@@ -61,11 +66,11 @@ leg = legs[1]
 # ## Legs Information
 # %%
 # Departure City Leg
-print(leg.find_element(By.XPATH, '//span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text)
+print(leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text)
 
 #%%
 # Departure Time Leg
-print(leg.find_element(By.XPATH, '//span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text)
+print(leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text)
 #%%
 # Duration flight
 print('Flight Duration')
@@ -78,15 +83,15 @@ print(leg.find_element(By.XPATH, './/span[@class="airplane-code"]').text)
 # %%
 # flight number
 print('Flight Number:')
-print(leg.find_element(By.XPATH, '//div[@class="incoming-outcoming-title"]/div').text)
+print(leg.find_element(By.XPATH, './/div[@class="incoming-outcoming-title"]/div').text)
 # %%
 # Arrival City Leg
 print('Arrival City Leg')
-print(leg.find_element(By.XPATH, '//span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text)
+print(leg.find_element(By.XPATH, './/span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text)
 #%%
 # Arrival Time Leg
 print('Arrival Time for the Leg')
-print(leg.find_element(By.XPATH, '//span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text.replace('. ', '.'))
+print(leg.find_element(By.XPATH, './/span[@class="pathInfo-destination incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text.replace('. ', '.'))
 # %%
 connections = leg.find_elements(By.XPATH, '//section[@data-test="section-info-connection"]')
 print(f'Number of connections: {len(connections)}')
@@ -97,7 +102,7 @@ print(connections[0].find_element(By.XPATH, './/section//span[@class="time"]').t
 # %% [markdown]
 # ## Close Modal
 # %%
-button_close = leg.find_element(By.XPATH, '//button[@class="MuiButtonBase-root MuiIconButton-root sc-jbKcbu eQFcRm"]')
+button_close = driver.find_element(By.XPATH, '//button[contains(@id, "itinerary-modal")]')
 
 button_close.click()
 # %%
@@ -114,7 +119,10 @@ print(fare_amounts)
 # %%
 # fare type
 print('Fare Types:')
-fare_types = [fare.find_element(By.XPATH, './div/div/div/div/span[@title]').text for fare in fares]
+fare_types = [fare.find_element(By.XPATH, './div/div/div/div/span[@title]').text for fare in fares[:-1]]
+if len(fares) > 3:
+    premium_fare = fares[-1].find_element(By.XPATH, './div/div/div/div/span/span[3]').text
+    fare_types += [premium_fare]
 print(fare_types)
 # %%
 print('Fares Info:')
@@ -128,15 +136,16 @@ flight.find_element(By.XPATH, './/button[contains(@class,"MuiButtonBase-root")]'
 # %%
 def get_prices(flight):    
     fares = flight.find_elements(By.XPATH, './/li[contains(@id, "WrapperBundleCardbundle-detail")]')
-    fare_types = [fare.find_element(By.XPATH, './div/div/div/div/span[@title]').text for fare in fares]
+    fare_types = [fare.find_element(By.XPATH, './div/div/div/div/span[@title]').text for fare in fares[:-1]]
+    if len(fares) > 3:
+        premium_fare = fares[-1].find_element(By.XPATH, './div/div/div/div/span/span[3]').text
+        fare_types += [premium_fare]
+
     fare_amounts = [fare.find_element(By.XPATH, './/span[contains(@class, "displayAmount")]').text for fare in fares]
     return dict(zip(fare_types, fare_amounts))
 #%%
-def get_info_leg(flight):
+def get_info_legs(flight):
     'Function that returns information about a leg flight'
-
-    # Open the Modal
-    # flight.find_element(By.XPATH, './/a[@id="itinerary-modal-0-dialog-open"]').click()
 
     info_legs = []    
 
@@ -152,7 +161,7 @@ def get_info_leg(flight):
 
         info = {
             # Source Leg
-            'source': leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div/span[1]').text,
+            'source': leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[1]').text,
             # Source Time Leg
             'departure': leg.find_element(By.XPATH, './/span[@class="pathInfo-origin incoming-outcoming-title"]/following-sibling::div[@class="iataCode"]/span[2]').text,
             # Duration flight
@@ -170,7 +179,8 @@ def get_info_leg(flight):
             'connection': connection_length,
             # connection place
             'connection_place': connection_place,
-        }            
+        }
+  
 
         info_legs.append(info)              
 
@@ -182,10 +192,10 @@ def get_info_leg(flight):
 print(flight)
 
 # %%
-infolegs = get_info_leg(flight)
+infolegs = get_info_legs(flight)
 print(infolegs)
 # %%
-def get_info_flights(flight):
+def get_info_flight(flight):
     return {
         'departure': flight.find_element( By.XPATH, './/div[contains(@class, "flight-information")][1]/span').text,
         'arrival': flight.find_element(By.XPATH, './/div[contains(@class, "flight-information")][2]/span').text.split('\n')[0],
@@ -195,8 +205,63 @@ def get_info_flights(flight):
     
 # %%
     
-print(get_info_flights(flight))
+print(get_info_flight(flight))
 
 # %%
 def get_info(driver):
-    flights = driver.find_elements(By.XPATH, '//li[@class="sc-dCVVYJ CEVgB"]')
+    flights = driver.find_element(By.XPATH, '//ol[@aria-label="Vuelos disponibles."]').find_elements(By.TAG_NAME, 'li')
+    print(f'Number of flights: {len(flights)}\nStart scraping')
+    
+    information = []
+    
+    for i,flight in enumerate(flights, 1):
+        print(f'Flight Number: {i}')
+        time.sleep(1)
+        info_flight = get_info_flight(flight)
+        
+        # open itenerary button
+        flight.find_element(By.XPATH, './/a[starts-with(@id, "itinerary-modal")]').click()
+        
+        time.sleep(1)
+        info_stops = get_info_legs(flight)
+        
+        time.sleep(0.5)
+        # close button
+        flight.find_element(By.XPATH, '//button[contains(@id, "itinerary-modal")]').click()
+
+        # driver.find_element(By.XPATH, '//button[@id="itinerary-modal-0-dialog-close"]').click()
+        
+        # open fares, click on the flight
+        flight.click()
+
+        prices = get_prices(flight)
+
+        # close modal
+        driver.find_element(By.XPATH, './/button[contains(@class,"MuiButtonBase-root")]').click()
+
+        information.append(
+            {'prices': prices, 
+            'flight': info_flight, 
+            'stops':info_stops}
+            )
+    return information
+
+# %%
+url = 'https://www.latamairlines.com/mx/es'
+options = Options()
+options.add_experimental_option('detach', True)
+options.add_argument('start-maximized')
+options.add_argument('--incognito')
+
+# download ChromeDriver from https://chromedriver.chromium.org/downloads
+driver = webdriver.Chrome(executable_path=r'..\chromedriver.exe')  # for windows
+
+# driver = webdriver.Chrome(chrome_options=options,
+                        #   service=Service(ChromeDriverManager().install()))  # for linux
+#%%
+driver.get(url)
+#%%
+get_info(driver)
+#%%
+driver.close()
+# %%
