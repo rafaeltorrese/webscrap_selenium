@@ -7,7 +7,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
-
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 # %%
 url = 'https://www.latamairlines.com/mx/es'
 
@@ -261,6 +263,14 @@ driver = webdriver.Chrome(executable_path=r'..\chromedriver.exe')  # for windows
 #%%
 driver.get(url)
 #%%
-get_info(driver)
+delay = 10
+try:
+    # smart delays
+    flight = WebDriverWait(driver, delay).until(EC.presence_of_element_located(By.XPATH, '//ol[@aria-label="Vuelos disponibles."]/li[1]'))
+    print('The page is loaded')
+    info_all_flights = get_info(driver)
+except TimeoutException:
+    print('The page delay is too big')
 driver.close()
 #%%
+printI(info_all_flights)
