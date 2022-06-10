@@ -262,6 +262,5 @@ driver = webdriver.Chrome(executable_path=r'..\chromedriver.exe')  # for windows
 driver.get(url)
 #%%
 get_info(driver)
-#%%
 driver.close()
-# %%
+#%%
